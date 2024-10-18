@@ -87,17 +87,76 @@ func NewValidator(v *validator.Validate) *val {
 	return &val{v}
 }
 
-func Create(rules []Rule) (func() *val, error) {
-	validate := validator.New()
+func getDefaultRules() []Rule {
+	return []Rule{
+		NewValidateHOAPatternValidator(),
+		NewPersonnelNameValidator(),
+		NewAddressPatternValidator(),
+		NewEmailValidator(),
+		NewGValidatePhoneLengthPatternValidator(),
+		NewGValidateSOBONamePatternValidator(),
+		NewGValidatePANNumberPatternValidator(),
+		NewGValidateVehicleRegistrationNumberPatternValidator(),
+		NewGValidateBarCodeNumberPatternValidator(),
+		NewCustomValidateGLCodePatternValidator(),
+		NewTimeStampValidatePatternValidator(),
+		NewCustomValidateAnyStringLengthto50PatternValidator(),
+		NewDateyyyymmddPatternValidator(),
+		NewDateddmmyyyyPatternValidator(),
+		NewValidateEmployeeIDPatternValidator(),
+		NewValidateValidateGSTINPatternValidator(),
+		NewValidateBankUserIDPatternValidator(),
+		NewValidateOrderNumberPatternValidator(),
+		NewValidateAWBNumberPatternValidator(),
+		NewValidatePNRNoPatternValidator(),
+		NewValidatePLIIDPatternValidator(),
+		NewValidatePaymentTransIDPatternValidator(),
+		NewValidateOfficeCustomerIDPatternValidator(),
+		NewValidateBankIDPatternValidator(),
+		NewValidateCSIFacilityIDPatternValidator(),
+		NewValidatePosBookingOrderNumberPatternValidator(),
+		NewValidateSOLIDPatternValidator(),
+		NewValidatePLIOfficeIDPatternValidator(),
+		NewValidateProductCodePatternValidator(),
+		NewValidateCustomerIDPatternValidator(),
+		NewValidateFacilityIDPatternValidator(),
+		NewValidateApplicationIDPatternValidator(),
+		NewValidateReceiverKYCReferencePatternValidator(),
+		NewValidateOfficeCustomerPatternValidator(),
+		NewValidatePRANPatternValidator(),
+		NewvalidateCustomFlightNoValidator(),
+		NewvalidatePinCodeGlobalValidator(),
+		NewValidatePhoneNumberStringPatternValidator(),
+		NewCustomofficeidGlobalValidator(),
+		NewvalidateBagIdPatternValidator(),
+		NewCustomTrainNoGlobalValidator(),
+		NewCustomSCSGlobalValidator(),
+		NewvalidateCircleIDGlobalValidator(),
+		NewvalidateTariffIDGlobalValidator(),
+		NewvalidateCIFNumGlobalValidator(),
+		NewvalidateContractNumGlobalValidator(),
+		NewvalidateRegionIDGlobalValidator(),
+		NewvalidateVasIDGlobalValidator(),
+		NewvalidateUserCodeGlobalValidator(),
+		NewvalidateHONamePatternValidator(),
+		NewvalidateHOIDGlobalValidator(),
+		NewvalidateAccountNoGlobalValidator(),
+		NewIsValidTimestampGlobalValidator(),
+	}
+}
+
+func Create() (*val, error) {
+	rules := getDefaultRules()
+	validate = validator.New()
 	eng := en.New()
-	uni := ut.New(eng, eng)
-	trans, _ := uni.GetTranslator("en")
+	uni = ut.New(eng, eng)
+	trans, _ = uni.GetTranslator("en")
 
 	// Register default translations for the validator
 	if err := en_translations.RegisterDefaultTranslations(validate, trans); err != nil {
 		return nil, fmt.Errorf("failed to register translations: %v", err)
+		//log.Fatalf("Failed to register translations: %v", err)
 	}
-
 	validate.RegisterTagNameFunc(getStructFieldName)
 
 	for _, r := range rules {
@@ -107,9 +166,7 @@ func Create(rules []Rule) (func() *val, error) {
 		validationMessages[r.Name()] = r.Message
 	}
 
-	return func() *val {
-		return NewValidator(validate)
-	}, nil
+	return NewValidator(validate), nil
 }
 
 func ValidateStruct(s interface{}) error {
@@ -161,7 +218,6 @@ func ValidateStruct(s interface{}) error {
 	}
 	return nil
 }
-
 func (ve *Error) Unwrap() error {
 	return fiber.ErrBadRequest
 }
