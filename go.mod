@@ -1,4 +1,4 @@
-module gitlab.cept.gov.in/it-2.0-common/api-validation
+module github.com/abhishekanandwade/validator-lib
 
 go 1.22.1
 
