@@ -84,20 +84,20 @@ type val struct {
 }
 
 func NewValidator(v *validator.Validate) *val {
-	return &val{validate}
+	return &val{v}
 }
 
-func Create(rules []Rule) (*val, error) {
-	validate = validator.New()
+func Create(rules []Rule) (func() *val, error) {
+	validate := validator.New()
 	eng := en.New()
-	uni = ut.New(eng, eng)
-	trans, _ = uni.GetTranslator("en")
+	uni := ut.New(eng, eng)
+	trans, _ := uni.GetTranslator("en")
 
 	// Register default translations for the validator
 	if err := en_translations.RegisterDefaultTranslations(validate, trans); err != nil {
 		return nil, fmt.Errorf("failed to register translations: %v", err)
-		//log.Fatalf("Failed to register translations: %v", err)
 	}
+
 	validate.RegisterTagNameFunc(getStructFieldName)
 
 	for _, r := range rules {
@@ -107,7 +107,9 @@ func Create(rules []Rule) (*val, error) {
 		validationMessages[r.Name()] = r.Message
 	}
 
-	return NewValidator(validate), nil
+	return func() *val {
+		return NewValidator(validate)
+	}, nil
 }
 
 func ValidateStruct(s interface{}) error {
