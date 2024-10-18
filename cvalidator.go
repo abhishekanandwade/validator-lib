@@ -900,5 +900,3 @@ func validateAccountNoGlobal(fl validator.FieldLevel) bool {
 	// If the field is neither a string, uint64, nor int, the validation fails
 	return false
 }
-
-

@@ -9,7 +9,6 @@ import (
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/validator/v10"
 	en_translations "github.com/go-playground/validator/v10/translations/en"
-	"github.com/gofiber/fiber/v2"
 	ut "github.com/templatedop/universal-translator-master"
 )
 
@@ -145,6 +144,16 @@ func getDefaultRules() []Rule {
 	}
 }
 
+func registerDefaultRules(rules []Rule, val *validator.Validate) error {
+	for _, r := range rules {
+		if err := val.RegisterValidation(r.Name(), r.Apply); err != nil {
+			return err
+		}
+		validationMessages[r.Name()] = r.Message
+	}
+	return nil
+}
+
 func Create() (*val, error) {
 	rules := getDefaultRules()
 	validate = validator.New()
@@ -154,22 +163,18 @@ func Create() (*val, error) {
 
 	// Register default translations for the validator
 	if err := en_translations.RegisterDefaultTranslations(validate, trans); err != nil {
-		return nil, fmt.Errorf("failed to register translations: %v", err)
+		return nil, err
 		//log.Fatalf("Failed to register translations: %v", err)
 	}
 	validate.RegisterTagNameFunc(getStructFieldName)
-
-	for _, r := range rules {
-		if err := validate.RegisterValidation(r.Name(), r.Apply); err != nil {
-			return nil, err
-		}
-		validationMessages[r.Name()] = r.Message
+	err := registerDefaultRules(rules, validate)
+	if err != nil {
+		return nil, err
 	}
-
 	return NewValidator(validate), nil
 }
 
-func ValidateStruct(s interface{}) error {
+func (v *val) ValidateStruct(s interface{}) error {
 
 	if validate == nil {
 		panic("validator not initialized")
@@ -189,13 +194,13 @@ func ValidateStruct(s interface{}) error {
 		for _, e := range validatorErrors {
 
 			tag := e.Tag()
-			if _, ok := validationMessages[tag]; ok {
+			if Emsg, ok := validationMessages[tag]; ok {
 				fieldErrors = append(fieldErrors, FieldError{
 					FailedField: e.Field(),
 
 					Tag:     e.Param(),
 					Value:   e.Value(),
-					Message: getTagMessage(e),
+					Message: Emsg(e.Field(), e.Value()),
 				})
 
 			} else {
@@ -218,26 +223,48 @@ func ValidateStruct(s interface{}) error {
 	}
 	return nil
 }
-func (ve *Error) Unwrap() error {
-	return fiber.ErrBadRequest
-}
+
+// func (ve *Error) Unwrap() error {
+// 	return fiber.ErrBadRequest
+// }
 
 func (ve *Error) Error() string {
 	return ve.msg
 }
 
-func (ve *Error) FieldErrors() []FieldError {
-	return ve.errs
-}
-
-func (fe FieldError) Error() string {
-	return fe.Message
-}
-
-func getTagMessage(err validator.FieldError) string {
-	if mr, ok := validationMessages[err.Tag()]; ok {
-		return mr(err.Field(), err.Value())
+func (v *val) RegisterCustomValidation(tag string, fn validator.Func, message string) error {
+	if tag == "" {
+		return errors.New("validation tag cannot be empty")
+	}
+	if fn == nil {
+		return errors.New("validation function cannot be nil")
 	}
 
-	return err.Error()
+	if _, exists := validationMessages[tag]; exists {
+		return fmt.Errorf("validation tag '%s' is already registered", tag)
+	}
+
+	rule := NewRule(tag, fn, message)
+	err := registerDefaultRules([]Rule{rule}, validate)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
+
+// func (ve *Error) FieldErrors() []FieldError {
+// 	return ve.errs
+// }
+
+// func (fe FieldError) Error() string {
+// 	return fe.Message
+// }
+
+// func getTagMessage(err validator.FieldError) string {
+// 	if mr, ok := validationMessages[err.Tag()]; ok {
+// 		return mr(err.Field(), err.Value())
+// 	}
+
+// 	return err.Error()
+// }
